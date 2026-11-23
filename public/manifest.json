@@ -1,0 +1,23 @@
+{
+  "name": "HanGo - Học tiếng Hàn thông minh",
+  "short_name": "HanGo",
+  "description": "Nền tảng học tiếng Hàn trực tuyến cao cấp, ghi nhớ ngắt quãng SRS và lộ trình chuẩn TOPIK cho người Việt.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B192C",
+  "theme_color": "#1E40AF",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
