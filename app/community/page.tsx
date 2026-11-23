@@ -13,6 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
@@ -21,8 +22,13 @@ import { useHanGoStore } from "@/lib/store";
 import {
   getCommunityPosts,
   createCommunityPost,
+  getCommunityComments,
+  createCommunityComment,
   type CommunityPost,
+  type CommunityComment,
 } from "@/lib/supabase/data";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const CATEGORY_TO_DB: Record<string, CommunityPost["category"]> = {
   "Hỏi đáp": "question",
@@ -85,7 +91,7 @@ export default function CommunityPage() {
       content:
         "Chào mọi người, bí quyết lớn nhất của mình khi viết câu 53 là nắm chắc các cấu trúc tăng trưởng (증가하다, 급증하다) và giảm (감소하다). Đừng dùng từ quá phức tạp, quan trọng là không sai chính tả và dùng đúng tiểu từ!",
       likes: 42,
-      comments: 15,
+      comments: 0,
       isLiked: false,
     },
     {
@@ -98,12 +104,12 @@ export default function CommunityPage() {
       content:
         "Mình thấy sách bảo hai cấu trúc này đều là 'Phải làm gì', nhưng người Hàn khi nói chuyện hay dùng '되다' hơn đúng không ạ?",
       likes: 18,
-      comments: 9,
-      isLiked: true,
+      comments: 0,
+      isLiked: false,
     },
     {
       id: "p3",
-      author: "Nguyễn Minh Quân (Bạn)",
+      author: "Nguyễn Minh Quân",
       avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80",
       time: "1 ngày trước",
       category: "Tiến độ",
@@ -111,7 +117,7 @@ export default function CommunityPage() {
       content:
         "Cảm giác học mỗi ngày 15 phút với Flashcard SRS nhàn hơn nhiều so với việc ngồi cày một đống từ vựng một lúc. Cố gắng giữ ngọn lửa streak đến 30 ngày!",
       likes: 56,
-      comments: 7,
+      comments: 0,
       isLiked: false,
     },
   ]);
@@ -119,6 +125,70 @@ export default function CommunityPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState<Post["category"]>("Hỏi đáp");
+
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [commentsByPost, setCommentsByPost] = useState<
+    Record<string, CommunityComment[]>
+  >({});
+  const [loadingComments, setLoadingComments] = useState<
+    Record<string, boolean>
+  >({});
+  const [commentDrafts, setCommentDrafts] = useState<Record<string, string>>(
+    {}
+  );
+  const [sendingCommentFor, setSendingCommentFor] = useState<string | null>(
+    null
+  );
+
+  const toggleComments = async (post: Post) => {
+    const willOpen = !openComments[post.id];
+    setOpenComments((prev) => ({ ...prev, [post.id]: willOpen }));
+    if (!willOpen || commentsByPost[post.id] || !UUID_RE.test(post.id)) return;
+    setLoadingComments((prev) => ({ ...prev, [post.id]: true }));
+    const list = await getCommunityComments(post.id);
+    setCommentsByPost((prev) => ({ ...prev, [post.id]: list }));
+    setPosts((prev) =>
+      prev.map((p) => (p.id === post.id ? { ...p, comments: list.length } : p))
+    );
+    setLoadingComments((prev) => ({ ...prev, [post.id]: false }));
+  };
+
+  const handleSendComment = async (post: Post) => {
+    const draft = (commentDrafts[post.id] || "").trim();
+    if (!draft) return;
+    if (!isAuthenticated) {
+      toast.error("Bạn cần đăng nhập để bình luận.");
+      return;
+    }
+    if (!UUID_RE.test(post.id)) {
+      toast.info("Bài viết mẫu chỉ để tham khảo — hãy đăng bài viết thật để thảo luận nhé!");
+      return;
+    }
+    setSendingCommentFor(post.id);
+    const { error } = await createCommunityComment(post.id, user.id, draft);
+    setSendingCommentFor(null);
+    if (error) {
+      toast.error("Gửi bình luận chưa thành công. Bạn thử lại giúp mình nhé!");
+      return;
+    }
+    const mine: CommunityComment = {
+      id: `tmp_${Date.now()}`,
+      author: user.fullName,
+      avatar: user.avatarUrl,
+      content: draft,
+      time: new Date().toISOString(),
+    };
+    setCommentsByPost((prev) => ({
+      ...prev,
+      [post.id]: [...(prev[post.id] || []), mine],
+    }));
+    setPosts((prev) =>
+      prev.map((p) =>
+        p.id === post.id ? { ...p, comments: p.comments + 1 } : p
+      )
+    );
+    setCommentDrafts((prev) => ({ ...prev, [post.id]: "" }));
+  };
 
   // Load real posts from Supabase; the bundled samples stay as the
   // fallback until the first real post exists.
@@ -169,23 +239,7 @@ export default function CommunityPage() {
       return;
     }
 
-    const newPost: Post = {
-      id: `p_${Date.now()}`,
-      author: `${user.fullName} (Bạn)`,
-      avatar: user.avatarUrl,
-      time: "Vừa xong",
-      category: newCategory,
-      title: newTitle,
-      content: newContent,
-      likes: 1,
-      comments: 0,
-      isLiked: true,
-    };
-
-    setPosts([newPost, ...posts]);
-    setNewTitle("");
-    setNewContent("");
-    toast.success("Đăng bài viết lên cộng đồng thành công!");
+    toast.error("Bạn cần đăng nhập để đăng bài viết.");
   };
 
   return (
@@ -208,7 +262,24 @@ export default function CommunityPage() {
             </p>
           </div>
 
-          {/* Create Post Box */}
+          {/* Create Post Box — members only */}
+          {!isAuthenticated ? (
+            <div className="rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-sm mb-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+              <div className="flex-1">
+                <h3 className="font-bold text-sm text-foreground">
+                  Đăng nhập để tham gia thảo luận
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                  Chỉ thành viên mới đăng bài và bình luận được trong cộng đồng HanGo.
+                </p>
+              </div>
+              <Link href="/login">
+                <Button variant="premium" size="sm">
+                  Đăng nhập ngay
+                </Button>
+              </Link>
+            </div>
+          ) : (
           <form
             onSubmit={handleCreatePost}
             className="rounded-3xl border border-border/80 bg-card p-5 sm:p-6 shadow-sm space-y-3 mb-6"
@@ -249,6 +320,7 @@ export default function CommunityPage() {
               </Button>
             </div>
           </form>
+          )}
 
           {/* Posts Feed */}
           <div className="space-y-4">
@@ -295,7 +367,10 @@ export default function CommunityPage() {
                       <span>{post.likes}</span>
                     </button>
 
-                    <button className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-semibold">
+                    <button
+                      onClick={() => toggleComments(post)}
+                      className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground font-semibold"
+                    >
                       <MessageSquare className="w-4 h-4" />
                       <span>{post.comments} bình luận</span>
                     </button>
@@ -309,6 +384,83 @@ export default function CommunityPage() {
                     <span>Báo cáo</span>
                   </button>
                 </div>
+
+                {/* Comments section */}
+                {openComments[post.id] && (
+                  <div className="pt-3 border-t border-border/60 space-y-3">
+                    {loadingComments[post.id] ? (
+                      <p className="text-xs text-muted-foreground">Đang tải bình luận…</p>
+                    ) : (commentsByPost[post.id] || []).length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Chưa có bình luận nào — hãy là người đầu tiên chia sẻ nhé!
+                      </p>
+                    ) : (
+                      (commentsByPost[post.id] || []).map((c) => (
+                        <div key={c.id} className="flex items-start gap-2.5">
+                          <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-[11px] shrink-0">
+                            {c.author.charAt(0)}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs">
+                              <span className="font-bold text-foreground">{c.author}</span>{" "}
+                              <span className="text-muted-foreground">
+                                {new Date(c.time).toLocaleString("vi-VN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                })}
+                              </span>
+                            </p>
+                            <p className="text-xs sm:text-sm text-foreground/90 leading-relaxed">
+                              {c.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+
+                    {isAuthenticated ? (
+                      <div className="flex items-center gap-2 pt-1">
+                        <input
+                          type="text"
+                          value={commentDrafts[post.id] || ""}
+                          onChange={(e) =>
+                            setCommentDrafts((prev) => ({
+                              ...prev,
+                              [post.id]: e.target.value,
+                            }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              handleSendComment(post);
+                            }
+                          }}
+                          placeholder="Viết bình luận của bạn…"
+                          className="flex-1 h-9 px-3 rounded-xl border border-input text-xs sm:text-sm bg-background"
+                        />
+                        <Button
+                          size="sm"
+                          variant="premium"
+                          className="gap-1.5"
+                          disabled={sendingCommentFor === post.id}
+                          onClick={() => handleSendComment(post)}
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Gửi</span>
+                        </Button>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        <Link href="/login" className="font-semibold text-primary hover:underline">
+                          Đăng nhập
+                        </Link>{" "}
+                        để tham gia bình luận.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>

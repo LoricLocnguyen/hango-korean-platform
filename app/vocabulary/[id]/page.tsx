@@ -17,25 +17,30 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
-import { fullVocabulariesData, type FullVocabulary } from "@/lib/seed-data";
-import { getVocabularies } from "@/lib/supabase/data";
+import { type FullVocabulary } from "@/lib/seed-data";
+import { getVocabularyById } from "@/lib/supabase/data";
 
 export default function VocabularyDetailPage() {
   const params = useParams();
   const router = useRouter();
   const wordId = params?.id as string;
 
-  const [word, setWord] = useState<FullVocabulary>(
-    fullVocabulariesData.find((w) => w.id === wordId) || fullVocabulariesData[0]
-  );
-  const [isFavorite, setIsFavorite] = useState(word.isFavorite || false);
+  const [word, setWord] = useState<FullVocabulary | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     let active = true;
-    getVocabularies().then((list) => {
+    setWord(null);
+    setNotFound(false);
+    getVocabularyById(wordId).then((found) => {
       if (!active) return;
-      const found = list.find((w) => w.id === wordId);
-      if (found) setWord(found);
+      if (found) {
+        setWord(found);
+        setIsFavorite(found.isFavorite || false);
+      } else {
+        setNotFound(true);
+      }
     });
     return () => {
       active = false;
@@ -50,6 +55,50 @@ export default function VocabularyDetailPage() {
       window.speechSynthesis.speak(utterance);
     }
   };
+
+  if (notFound) {
+    return (
+      <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-950/40">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopNavbar />
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full pb-24">
+            <div className="rounded-3xl border border-border/80 bg-card p-8 shadow-sm text-center space-y-3">
+              <h2 className="font-bold text-lg text-foreground">Không tìm thấy từ vựng này</h2>
+              <p className="text-sm text-muted-foreground">
+                Từ vựng có thể đã bị xoá hoặc đường dẫn chưa đúng.
+              </p>
+              <Link
+                href="/vocabulary"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Quay lại Danh sách từ vựng</span>
+              </Link>
+            </div>
+          </main>
+          <MobileBottomNav />
+        </div>
+      </div>
+    );
+  }
+
+  if (!word) {
+    return (
+      <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-950/40">
+        <AppSidebar />
+        <div className="flex-1 flex flex-col min-w-0">
+          <TopNavbar />
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto w-full pb-24">
+            <div className="rounded-3xl border border-border/80 bg-card p-8 shadow-sm text-center">
+              <p className="text-sm text-muted-foreground">Đang tải từ vựng…</p>
+            </div>
+          </main>
+          <MobileBottomNav />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-slate-50/50 dark:bg-slate-950/40">

@@ -21,7 +21,7 @@ export function HeroSection() {
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.15]">
-            Chinh phục tiếng Hàn theo{" "}
+            {"Chinh phục tiếng Hàn theo "}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
               cách thông minh hơn
             </span>

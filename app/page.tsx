@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     title: "HanGo - Chinh phục tiếng Hàn theo cách thông minh hơn",
     description:
       "Học tiếng Hàn với thuật toán ghi nhớ ngắt quãng SRS, luyện phát âm chuẩn Seoul và phương pháp từ vựng Hán - Hàn độc quyền.",
-    url: "https://hango.edu.vn",
+    url: "https://hango-korean-platform.vercel.app",
     siteName: "HanGo EdTech",
     images: [
       {

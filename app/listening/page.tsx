@@ -23,6 +23,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { sampleListeningExercises, ListeningExercise } from "@/lib/seed-data";
 import { getListeningExercises } from "@/lib/supabase/data";
+import { speakKorean } from "@/lib/tts";
 import { useHanGoStore } from "@/lib/store";
 
 export default function ListeningPage() {
@@ -51,17 +52,10 @@ export default function ListeningPage() {
 
   const playSpeech = (text: string) => {
     setIsPlaying(true);
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "ko-KR";
-      utterance.rate = playbackSpeed;
-      utterance.onend = () => setIsPlaying(false);
-      utterance.onerror = () => setIsPlaying(false);
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setTimeout(() => setIsPlaying(false), 2000);
-    }
+    speakKorean(text, {
+      rate: playbackSpeed,
+      onEnd: () => setIsPlaying(false),
+    });
   };
 
   const handleCheckAnswer = () => {

@@ -245,18 +245,40 @@ export const useHanGoStore = create<HanGoStore>((set, get) => {
       });
   }
 
+  // Neutral profile shown to signed-out visitors. The bundled demo persona
+  // (initialUserProfile) must never pose as the visitor's own account —
+  // guests start from a clean slate and only see real numbers after login.
+  const guestProfile: UserProfile = {
+    ...initialUserProfile,
+    id: 'guest',
+    email: '',
+    fullName: 'Khách',
+    avatarUrl:
+      'https://ui-avatars.com/api/?name=K&background=64748b&color=fff',
+    level: 1,
+    totalXp: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    wordsLearned: 0,
+    consecutiveDays: 0,
+    todayMinutes: 0,
+    todayXp: 0,
+    nextLessonId: 'les_h01_1',
+    nextLessonTitle: 'Bài 1: 10 Nguyên âm cơ bản',
+  };
+
   function resetToGuest() {
     set({
       isAuthenticated: false,
       authReady: true,
-      user: initialUserProfile,
+      user: guestProfile,
       srsCards: sampleSRSCards,
       progressByLesson: {},
     });
   }
 
   return {
-    user: initialUserProfile,
+    user: guestProfile,
     srsCards: sampleSRSCards,
     isAuthenticated: false,
     authReady: false,

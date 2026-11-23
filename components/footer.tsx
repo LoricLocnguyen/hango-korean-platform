@@ -94,8 +94,8 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:support@hango.edu.vn" className="hover:text-primary transition-colors">
-                  support@hango.edu.vn
+                <a href="mailto:pinkblack0905@gmail.com" className="hover:text-primary transition-colors">
+                  pinkblack0905@gmail.com
                 </a>
               </li>
               <li>

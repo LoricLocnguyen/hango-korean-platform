@@ -20,6 +20,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { sampleSpeakingScenarios, SpeakingScenario } from "@/lib/seed-data";
 import { getSpeakingScenarios } from "@/lib/supabase/data";
+import { speakKorean } from "@/lib/tts";
 import { useHanGoStore } from "@/lib/store";
 
 export default function SpeakingPage() {
@@ -49,14 +50,14 @@ export default function SpeakingPage() {
   const current = scenarios[selectedIdx];
   const addXP = useHanGoStore((s) => s.addXP);
 
+  const [isModelPlaying, setIsModelPlaying] = useState(false);
+
   const playModelSpeech = (text: string) => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "ko-KR";
-      utterance.rate = 0.85;
-      window.speechSynthesis.speak(utterance);
-    }
+    setIsModelPlaying(true);
+    speakKorean(text, {
+      rate: 0.85,
+      onEnd: () => setIsModelPlaying(false),
+    });
   };
 
   const startRecording = async () => {
@@ -204,10 +205,11 @@ export default function SpeakingPage() {
                   variant="outline"
                   size="sm"
                   onClick={() => playModelSpeech(current.koreanText)}
+                  disabled={isModelPlaying}
                   className="gap-2 rounded-full text-xs font-semibold"
                 >
-                  <Volume2 className="w-4 h-4 text-primary" />
-                  <span>Nghe người bản xứ phát âm mẫu</span>
+                  <Volume2 className={`w-4 h-4 text-primary ${isModelPlaying ? "animate-pulse" : ""}`} />
+                  <span>{isModelPlaying ? "Đang phát âm mẫu…" : "Nghe người bản xứ phát âm mẫu"}</span>
                 </Button>
               </div>
             </div>

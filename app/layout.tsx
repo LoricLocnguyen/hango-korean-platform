@@ -12,7 +12,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://hango.edu.vn"),
+  metadataBase: new URL("https://hango-korean-platform.vercel.app"),
   title: {
     default: "HanGo - Học tiếng Hàn thông minh cho người Việt",
     template: "%s | HanGo",
