@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -19,15 +19,32 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fullGrammarData, GrammarPoint } from "@/lib/seed-data";
+import { getGrammarPoints } from "@/lib/supabase/data";
 
 export default function GrammarPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("all");
+  const [grammarList, setGrammarList] = useState<GrammarPoint[]>(fullGrammarData);
   const [selectedGrammar, setSelectedGrammar] = useState<GrammarPoint | null>(
     fullGrammarData[0]
   );
 
-  const filteredGrammar = fullGrammarData.filter((g) => {
+  useEffect(() => {
+    let active = true;
+    getGrammarPoints().then((list) => {
+      if (active && list.length > 0) {
+        setGrammarList(list);
+        setSelectedGrammar((prev) =>
+          prev ? list.find((g) => g.id === prev.id) || list[0] : list[0]
+        );
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const filteredGrammar = grammarList.filter((g) => {
     const matchSearch =
       g.pattern.toLowerCase().includes(searchTerm.toLowerCase()) ||
       g.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

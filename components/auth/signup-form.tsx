@@ -16,7 +16,8 @@ export function SignupForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const login = useHanGoStore((s) => s.login);
+  const signupWithPassword = useHanGoStore((s) => s.signupWithPassword);
+  const loginWithGoogle = useHanGoStore((s) => s.loginWithGoogle);
 
   const {
     register,
@@ -42,8 +43,22 @@ export function SignupForm() {
   const onSubmit = async (data: SignupInput) => {
     setIsLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 900));
-      login(data.email, data.fullName);
+      const { error, needsConfirmation } = await signupWithPassword(
+        data.fullName,
+        data.email,
+        data.password
+      );
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      if (needsConfirmation) {
+        toast.success(
+          "Tạo tài khoản thành công! Anh mở email và bấm link xác nhận để kích hoạt nhé."
+        );
+        router.push("/login");
+        return;
+      }
       toast.success("Tạo tài khoản thành công! Bắt đầu khảo sát lộ trình.");
       router.push("/onboarding");
     } catch {
@@ -53,14 +68,14 @@ export function SignupForm() {
     }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      login("newuser.google@gmail.com", "Học viên Google");
-      toast.success("Đăng ký thành công cùng Google!");
-      router.push("/onboarding");
+    const { error } = await loginWithGoogle();
+    if (error) {
+      toast.error("Chưa bật đăng nhập Google. Anh đăng ký bằng email trước nhé!");
       setIsLoading(false);
-    }, 600);
+    }
+    // On success the browser is redirected to Google by Supabase.
   };
 
   return (

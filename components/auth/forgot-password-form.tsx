@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { forgotPasswordSchema, ForgotPasswordInput } from "@/lib/validations/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useHanGoStore } from "@/lib/store";
 
 export function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -23,10 +24,16 @@ export function ForgotPasswordForm() {
     resolver: zodResolver(forgotPasswordSchema),
   });
 
+  const resetPassword = useHanGoStore((s) => s.resetPassword);
+
   const onSubmit = async (data: ForgotPasswordInput) => {
     setIsLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 800));
+      const { error } = await resetPassword(data.email);
+      if (error) {
+        toast.error(error);
+        return;
+      }
       setSentEmail(data.email);
       setIsSubmitted(true);
       toast.success("Liên kết khôi phục đã được gửi vào email của bạn!");

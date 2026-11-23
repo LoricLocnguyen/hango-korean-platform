@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -17,15 +17,30 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
-import { fullVocabulariesData } from "@/lib/seed-data";
+import { fullVocabulariesData, type FullVocabulary } from "@/lib/seed-data";
+import { getVocabularies } from "@/lib/supabase/data";
 
 export default function VocabularyDetailPage() {
   const params = useParams();
   const router = useRouter();
   const wordId = params?.id as string;
 
-  const word = fullVocabulariesData.find((w) => w.id === wordId) || fullVocabulariesData[0];
+  const [word, setWord] = useState<FullVocabulary>(
+    fullVocabulariesData.find((w) => w.id === wordId) || fullVocabulariesData[0]
+  );
   const [isFavorite, setIsFavorite] = useState(word.isFavorite || false);
+
+  useEffect(() => {
+    let active = true;
+    getVocabularies().then((list) => {
+      if (!active) return;
+      const found = list.find((w) => w.id === wordId);
+      if (found) setWord(found);
+    });
+    return () => {
+      active = false;
+    };
+  }, [wordId]);
 
   const playSpeech = (text: string) => {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {

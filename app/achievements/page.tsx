@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Award,
   Crown,
@@ -16,6 +16,8 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Progress } from "@/components/ui/progress";
+import { getAchievementsCatalog } from "@/lib/supabase/data";
+import { useHanGoStore } from "@/lib/store";
 
 interface Achievement {
   id: string;
@@ -31,8 +33,37 @@ interface Achievement {
 
 export default function AchievementsPage() {
   const [filter, setFilter] = useState<string>("all");
+  const userId = useHanGoStore((s) => s.user.id);
+  const isAuthenticated = useHanGoStore((s) => s.isAuthenticated);
+  const [dbAchievements, setDbAchievements] = useState<Achievement[] | null>(null);
 
-  const achievements: Achievement[] = [
+  useEffect(() => {
+    let active = true;
+    getAchievementsCatalog(isAuthenticated ? userId : undefined).then((list) => {
+      if (active && list.length > 0) {
+        setDbAchievements(
+          list.map((a) => ({
+            id: a.id,
+            name: a.name,
+            desc: a.desc,
+            category: (["streak", "vocab", "quiz", "special"].includes(a.category)
+              ? a.category
+              : "special") as Achievement["category"],
+            icon: a.icon,
+            xpReward: a.xpReward,
+            isUnlocked: a.isUnlocked,
+            progress: a.progress,
+            unlockedAt: a.unlockedAt,
+          }))
+        );
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId, isAuthenticated]);
+
+  const achievements: Achievement[] = dbAchievements || [
     { id: "a1", name: "Bậc thầy Bảng chữ cái", desc: "Nắm vững toàn bộ 40 ký tự Hangul", category: "special", icon: "Crown", xpReward: 100, isUnlocked: true, progress: 100, unlockedAt: "15/11/2026" },
     { id: "a2", name: "Ngọn lửa bền bỉ 7 ngày", desc: "Duy trì streak 7 ngày liên tiếp", category: "streak", icon: "Flame", xpReward: 70, isUnlocked: true, progress: 100, unlockedAt: "16/11/2026" },
     { id: "a3", name: "Bất khả chiến bại 14 ngày", desc: "Duy trì streak 14 ngày không đứt đoạn", category: "streak", icon: "Flame", xpReward: 140, isUnlocked: true, progress: 100, unlockedAt: "23/11/2026" },
@@ -69,7 +100,7 @@ export default function AchievementsPage() {
             </div>
 
             <div className="text-xs font-bold px-3 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20">
-              Đã mở khóa 5 / {achievements.length} huy hiệu
+              Đã mở khóa {achievements.filter((a) => a.isUnlocked).length} / {achievements.length} huy hiệu
             </div>
           </div>
 

@@ -1,12 +1,29 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Trophy, ChevronRight, Flame, Sparkles } from "lucide-react";
 import { sampleLeaderboard } from "@/lib/mock-data";
+import { getLeaderboard } from "@/lib/supabase/data";
+import { useHanGoStore } from "@/lib/store";
+import type { LeaderboardEntry } from "@/lib/types";
 import { formatXP } from "@/lib/utils";
 
 export function LeaderboardCard() {
+  const currentUserId = useHanGoStore((s) => s.user.id);
+  const isAuthenticated = useHanGoStore((s) => s.isAuthenticated);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>(sampleLeaderboard);
+
+  useEffect(() => {
+    let active = true;
+    getLeaderboard(isAuthenticated ? currentUserId : undefined).then((list) => {
+      if (active && list.length > 0) setEntries(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [currentUserId, isAuthenticated]);
+
   const getRankBadge = (rank: number) => {
     if (rank === 1) return "🥇";
     if (rank === 2) return "🥈";
@@ -36,7 +53,7 @@ export function LeaderboardCard() {
       </div>
 
       <div className="space-y-2.5">
-        {sampleLeaderboard.map((item) => (
+        {entries.slice(0, 5).map((item) => (
           <div
             key={item.userId}
             className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 ${

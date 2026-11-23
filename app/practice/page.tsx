@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Dumbbell,
   Sparkles,
@@ -16,10 +16,21 @@ import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { sampleQuizQuestions, QuizQuestion } from "@/lib/seed-data";
+import { getQuizQuestions } from "@/lib/supabase/data";
 import { useHanGoStore } from "@/lib/store";
 
 export default function PracticePage() {
-  const [questions] = useState<QuizQuestion[]>(sampleQuizQuestions);
+  const [questions, setQuestions] = useState<QuizQuestion[]>(sampleQuizQuestions);
+
+  useEffect(() => {
+    let active = true;
+    getQuizQuestions().then((list) => {
+      if (active && list.length > 0) setQuestions(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [typedAnswer, setTypedAnswer] = useState("");

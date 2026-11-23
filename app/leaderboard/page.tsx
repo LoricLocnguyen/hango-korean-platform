@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Trophy,
   Flame,
@@ -13,10 +13,26 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { sampleLeaderboard } from "@/lib/mock-data";
+import { getLeaderboard } from "@/lib/supabase/data";
+import { useHanGoStore } from "@/lib/store";
+import type { LeaderboardEntry } from "@/lib/types";
 import { formatXP } from "@/lib/utils";
 
 export default function LeaderboardPage() {
   const [activeLeague, setActiveLeague] = useState<"ruby" | "gold" | "silver">("ruby");
+  const currentUserId = useHanGoStore((s) => s.user.id);
+  const isAuthenticated = useHanGoStore((s) => s.isAuthenticated);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>(sampleLeaderboard);
+
+  useEffect(() => {
+    let active = true;
+    getLeaderboard(isAuthenticated ? currentUserId : undefined).then((list) => {
+      if (active && list.length > 0) setEntries(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [currentUserId, isAuthenticated]);
 
   const leagues = [
     { id: "ruby", name: "Hạng Ruby (Đỉnh cao)", color: "text-rose-500", border: "border-rose-500/30" },
@@ -69,7 +85,7 @@ export default function LeaderboardPage() {
 
           {/* Leaderboard Table Card */}
           <div className="rounded-3xl border border-border/80 bg-card p-6 shadow-sm space-y-3">
-            {sampleLeaderboard.map((user) => {
+            {entries.map((user) => {
               const isTop3 = user.rank <= 3;
               return (
                 <div

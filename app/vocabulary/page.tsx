@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -21,6 +21,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fullVocabulariesData, FullVocabulary } from "@/lib/seed-data";
+import { getVocabularies } from "@/lib/supabase/data";
 
 export default function VocabularyPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,8 +30,19 @@ export default function VocabularyPage() {
   const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [isPlayingAudio, setIsPlayingAudio] = useState<string | null>(null);
 
-  // Local state for interactive word toggles
+  // Local state for interactive word toggles — starts with the bundled
+  // data, then swaps in the live Supabase vocabulary bank when available.
   const [words, setWords] = useState<FullVocabulary[]>(fullVocabulariesData);
+
+  useEffect(() => {
+    let active = true;
+    getVocabularies().then((list) => {
+      if (active && list.length > 0) setWords(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const topics = [
     { id: "all", name: "Tất cả chủ đề" },

@@ -37,6 +37,7 @@ export default function LessonPlayerPage() {
   const router = useRouter();
   const lessonId = params?.id as string;
   const addXP = useHanGoStore((s) => s.addXP);
+  const markLessonCompleted = useHanGoStore((s) => s.markLessonCompleted);
 
   const blocks: LessonBlock[] = [
     {
@@ -130,6 +131,9 @@ export default function LessonPlayerPage() {
       // Trigger celebration
       setIsCompleted(true);
       addXP(35, 10);
+      // Persist completion to Supabase for signed-in users (XP already
+      // granted above, so no extra XP here to avoid double counting).
+      markLessonCompleted(lessonId, 0);
       try {
         confetti({
           particleCount: 100,

@@ -16,7 +16,8 @@ export function LoginForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const login = useHanGoStore((s) => s.login);
+  const loginWithPassword = useHanGoStore((s) => s.loginWithPassword);
+  const loginWithGoogle = useHanGoStore((s) => s.loginWithGoogle);
 
   const {
     register,
@@ -25,8 +26,8 @@ export function LoginForm() {
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "minhquan.edtech@gmail.com",
-      password: "Password123!",
+      email: "",
+      password: "",
       rememberMe: true,
     },
   });
@@ -34,9 +35,11 @@ export function LoginForm() {
   const onSubmit = async (data: LoginInput) => {
     setIsLoading(true);
     try {
-      // Simulate authentication request
-      await new Promise((r) => setTimeout(r, 800));
-      login(data.email, "Nguyễn Minh Quân");
+      const { error } = await loginWithPassword(data.email, data.password);
+      if (error) {
+        toast.error(error);
+        return;
+      }
       toast.success("Đăng nhập thành công! Chào mừng bạn trở lại.");
       router.push("/dashboard");
     } catch {
@@ -46,14 +49,14 @@ export function LoginForm() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      login("user.google@gmail.com", "Học viên Google");
-      toast.success("Đăng nhập bằng tài khoản Google thành công!");
-      router.push("/dashboard");
+    const { error } = await loginWithGoogle();
+    if (error) {
+      toast.error("Chưa bật đăng nhập Google. Anh dùng email + mật khẩu trước nhé!");
       setIsLoading(false);
-    }, 600);
+    }
+    // On success the browser is redirected to Google by Supabase.
   };
 
   return (

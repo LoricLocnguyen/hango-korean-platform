@@ -19,10 +19,21 @@ import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { sampleSpeakingScenarios, SpeakingScenario } from "@/lib/seed-data";
+import { getSpeakingScenarios } from "@/lib/supabase/data";
 import { useHanGoStore } from "@/lib/store";
 
 export default function SpeakingPage() {
-  const [scenarios] = useState<SpeakingScenario[]>(sampleSpeakingScenarios);
+  const [scenarios, setScenarios] = useState<SpeakingScenario[]>(sampleSpeakingScenarios);
+
+  useEffect(() => {
+    let active = true;
+    getSpeakingScenarios().then((list) => {
+      if (active && list.length > 0) setScenarios(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);

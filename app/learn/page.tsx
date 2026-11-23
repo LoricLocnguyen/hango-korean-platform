@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Map,
@@ -24,13 +24,43 @@ import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { fullLevelsData } from "@/lib/seed-data";
+import { fullLevelsData, type LevelData } from "@/lib/seed-data";
+import { getLevelsTree } from "@/lib/supabase/data";
+import { useHanGoStore } from "@/lib/store";
 
 export default function LearnPage() {
   const [selectedLevelId, setSelectedLevelId] = useState("level_0");
+  const [levelsData, setLevelsData] = useState<LevelData[]>(fullLevelsData);
+  const progressByLesson = useHanGoStore((s) => s.progressByLesson);
+  const isAuthenticated = useHanGoStore((s) => s.isAuthenticated);
 
-  const currentLevel =
-    fullLevelsData.find((l) => l.id === selectedLevelId) || fullLevelsData[0];
+  useEffect(() => {
+    let active = true;
+    getLevelsTree().then((tree) => {
+      if (active && tree.length > 0) setLevelsData(tree);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const rawLevel =
+    levelsData.find((l) => l.id === selectedLevelId) || levelsData[0];
+
+  // For signed-in users, lesson completion comes from their real progress
+  // in Supabase; guests keep the showcase data.
+  const currentLevel = isAuthenticated
+    ? {
+        ...rawLevel,
+        modules: rawLevel.modules.map((m) => ({
+          ...m,
+          lessons: m.lessons.map((l) => ({
+            ...l,
+            completed: progressByLesson[l.id] === "completed",
+          })),
+        })),
+      }
+    : rawLevel;
 
   const iconMap: Record<string, React.ReactNode> = {
     BookA: <BookA className="w-5 h-5 text-blue-500" />,
@@ -89,7 +119,7 @@ export default function LearnPage() {
           {/* Level Switcher Horizontal Tabs */}
           <div className="overflow-x-auto pb-2 mb-6">
             <div className="flex items-center gap-2 min-w-max">
-              {fullLevelsData.map((lvl) => {
+              {levelsData.map((lvl) => {
                 const isSelected = lvl.id === selectedLevelId;
                 return (
                   <button

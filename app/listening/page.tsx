@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Headphones,
@@ -22,10 +22,21 @@ import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { sampleListeningExercises, ListeningExercise } from "@/lib/seed-data";
+import { getListeningExercises } from "@/lib/supabase/data";
 import { useHanGoStore } from "@/lib/store";
 
 export default function ListeningPage() {
-  const [exercises] = useState<ListeningExercise[]>(sampleListeningExercises);
+  const [exercises, setExercises] = useState<ListeningExercise[]>(sampleListeningExercises);
+
+  useEffect(() => {
+    let active = true;
+    getListeningExercises().then((list) => {
+      if (active && list.length > 0) setExercises(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<0.75 | 1 | 1.25>(1);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, HelpCircle } from "lucide-react";
@@ -9,13 +9,28 @@ import { AppSidebar } from "@/components/layout/app-sidebar";
 import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
-import { fullGrammarData } from "@/lib/seed-data";
+import { fullGrammarData, type GrammarPoint } from "@/lib/seed-data";
+import { getGrammarPoints } from "@/lib/supabase/data";
 import { useHanGoStore } from "@/lib/store";
 
 export default function GrammarPracticePage() {
   const params = useParams();
   const grammarId = params?.id as string;
-  const item = fullGrammarData.find((g) => g.id === grammarId) || fullGrammarData[0];
+  const [item, setItem] = useState<GrammarPoint>(
+    fullGrammarData.find((g) => g.id === grammarId) || fullGrammarData[0]
+  );
+
+  useEffect(() => {
+    let active = true;
+    getGrammarPoints().then((list) => {
+      if (!active) return;
+      const found = list.find((g) => g.id === grammarId);
+      if (found) setItem(found);
+    });
+    return () => {
+      active = false;
+    };
+  }, [grammarId]);
   const addXP = useHanGoStore((s) => s.addXP);
 
   // Exercise state

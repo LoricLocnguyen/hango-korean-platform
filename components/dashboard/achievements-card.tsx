@@ -1,12 +1,29 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Award, ChevronRight, Crown, Flame, BookOpen, Zap, Sparkles } from "lucide-react";
 import { sampleAchievements } from "@/lib/mock-data";
+import { getAchievements } from "@/lib/supabase/data";
+import { useHanGoStore } from "@/lib/store";
+import type { AchievementItem } from "@/lib/types";
 import { Progress } from "@/components/ui/progress";
 
 export function AchievementsCard() {
+  const userId = useHanGoStore((s) => s.user.id);
+  const isAuthenticated = useHanGoStore((s) => s.isAuthenticated);
+  const [achievements, setAchievements] = useState<AchievementItem[]>(sampleAchievements);
+
+  useEffect(() => {
+    let active = true;
+    getAchievements(isAuthenticated ? userId : undefined).then((list) => {
+      if (active && list.length > 0) setAchievements(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, [userId, isAuthenticated]);
+
   const iconMap: Record<string, React.ReactNode> = {
     Crown: <Crown className="w-5 h-5 text-amber-500" />,
     Flame: <Flame className="w-5 h-5 text-amber-500 fill-amber-500" />,
@@ -23,7 +40,7 @@ export function AchievementsCard() {
             Huy hiệu & Thành tích
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            2/4 huy hiệu đã mở khóa
+            {achievements.filter((a) => a.isUnlocked).length}/{achievements.length} huy hiệu đã mở khóa
           </p>
         </div>
 
@@ -36,7 +53,7 @@ export function AchievementsCard() {
       </div>
 
       <div className="space-y-3">
-        {sampleAchievements.map((ach) => (
+        {achievements.slice(0, 4).map((ach) => (
           <div
             key={ach.id}
             className={`p-3.5 rounded-2xl border transition-all ${

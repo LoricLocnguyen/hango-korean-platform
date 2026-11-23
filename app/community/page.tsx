@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Users,
   MessageSquare,
@@ -18,6 +18,46 @@ import { TopNavbar } from "@/components/layout/top-navbar";
 import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { Button } from "@/components/ui/button";
 import { useHanGoStore } from "@/lib/store";
+import {
+  getCommunityPosts,
+  createCommunityPost,
+  type CommunityPost,
+} from "@/lib/supabase/data";
+
+const CATEGORY_TO_DB: Record<string, CommunityPost["category"]> = {
+  "Hỏi đáp": "question",
+  "Tiến độ": "progress",
+  "Kinh nghiệm TOPIK": "tips",
+  "Thảo luận": "discussion",
+};
+
+const CATEGORY_FROM_DB: Record<CommunityPost["category"], Post["category"]> = {
+  question: "Hỏi đáp",
+  progress: "Tiến độ",
+  tips: "Kinh nghiệm TOPIK",
+  discussion: "Thảo luận",
+};
+
+function toLocalPost(p: CommunityPost): Post {
+  return {
+    id: p.id,
+    author: p.author,
+    avatar: p.avatar,
+    time: new Date(p.time).toLocaleString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }),
+    category: CATEGORY_FROM_DB[p.category] || "Thảo luận",
+    title: p.title,
+    content: p.content,
+    likes: p.likes,
+    comments: p.comments,
+    isLiked: false,
+  };
+}
 
 interface Post {
   id: string;
@@ -33,7 +73,7 @@ interface Post {
 }
 
 export default function CommunityPage() {
-  const { user } = useHanGoStore();
+  const { user, isAuthenticated } = useHanGoStore();
   const [posts, setPosts] = useState<Post[]>([
     {
       id: "p1",
@@ -80,6 +120,18 @@ export default function CommunityPage() {
   const [newContent, setNewContent] = useState("");
   const [newCategory, setNewCategory] = useState<Post["category"]>("Hỏi đáp");
 
+  // Load real posts from Supabase; the bundled samples stay as the
+  // fallback until the first real post exists.
+  useEffect(() => {
+    let active = true;
+    getCommunityPosts().then((list) => {
+      if (active && list.length > 0) setPosts(list.map(toLocalPost));
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const handleLike = (id: string) => {
     setPosts((prev) =>
       prev.map((p) => {
@@ -94,9 +146,28 @@ export default function CommunityPage() {
     );
   };
 
-  const handleCreatePost = (e: React.FormEvent) => {
+  const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newContent.trim()) return;
+
+    if (isAuthenticated) {
+      const { error } = await createCommunityPost(
+        user.id,
+        newTitle.trim(),
+        newContent.trim(),
+        CATEGORY_TO_DB[newCategory] || "discussion"
+      );
+      if (error) {
+        toast.error("Đăng bài chưa thành công. Anh thử lại giúp em nhé!");
+        return;
+      }
+      const list = await getCommunityPosts();
+      if (list.length > 0) setPosts(list.map(toLocalPost));
+      setNewTitle("");
+      setNewContent("");
+      toast.success("Đăng bài viết lên cộng đồng thành công!");
+      return;
+    }
 
     const newPost: Post = {
       id: `p_${Date.now()}`,
